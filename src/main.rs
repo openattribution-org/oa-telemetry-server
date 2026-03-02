@@ -1,13 +1,12 @@
 use std::net::SocketAddr;
 
 use clap::{Parser, Subcommand};
-use rand::RngExt;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
-use oa_telemetry_server::auth::hash_api_key;
+use oa_telemetry_server::auth::{generate_raw_key, hash_api_key};
 use oa_telemetry_server::config::ServerConfig;
 use oa_telemetry_server::services::domain_index;
 use oa_telemetry_server::state::OaState;
@@ -138,13 +137,6 @@ async fn serve() {
 // ---------------------------------------------------------------------------
 // Keygen
 // ---------------------------------------------------------------------------
-
-fn generate_raw_key(prefix: &str) -> String {
-    let mut rng = rand::rng();
-    let bytes: [u8; 24] = rng.random();
-    let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-    format!("{prefix}_{hex}")
-}
 
 async fn keygen(target: KeygenTarget) {
     let config = ServerConfig::from_env().expect("Failed to load config (need DATABASE_URL)");

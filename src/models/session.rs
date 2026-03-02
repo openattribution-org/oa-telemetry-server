@@ -85,7 +85,7 @@ pub struct BulkSessionRequest {
 // Database row
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SessionRow {
     pub id: Uuid,
     pub initiator_type: String,
@@ -130,14 +130,14 @@ pub struct BulkSessionResponse {
     pub outcome_recorded: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionWithEvents {
     #[serde(flatten)]
     pub session: SessionRow,
     pub events: Vec<EventRow>,
 }
 
-#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SessionSummary {
     pub id: Uuid,
     pub content_scope: Option<String>,

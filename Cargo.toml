@@ -14,9 +14,13 @@ path = "src/lib.rs"
 name = "oa-telemetry-server"
 path = "src/main.rs"
 
+[[bin]]
+name = "oa-tui"
+path = "src/tui/main.rs"
+
 [dependencies]
 axum = "0.8"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "tls-rustls", "uuid", "chrono", "migrate"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
@@ -34,6 +38,11 @@ dashmap = "6"
 sha2 = "0.10"
 rand = "0.10"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
+ratatui = "0.30"
+crossterm = { version = "0.28", features = ["event-stream"] }
+reqwest = { version = "0.12", features = ["json"] }
+color-eyre = "0.6"
+futures = "0.3"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

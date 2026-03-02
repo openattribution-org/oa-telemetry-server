@@ -63,6 +63,17 @@ where
         )
 }
 
+/// Click token routes: create tokens (PlatformAuth) and public context lookup.
+pub fn click_routes<S>() -> Router<S>
+where
+    OaState: FromRef<S>,
+    S: Clone + Send + Sync + 'static,
+{
+    Router::new()
+        .route("/click-tokens", post(routes::click_tokens::create_click_token))
+        .route("/ctx/{token}", get(routes::click_tokens::lookup_context))
+}
+
 /// Health check routes.
 pub fn health_routes<S>() -> Router<S>
 where
@@ -85,5 +96,6 @@ where
         .merge(publisher_routes())
         .merge(internal_routes())
         .merge(resolve_routes())
+        .merge(click_routes())
         .merge(health_routes())
 }

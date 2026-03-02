@@ -36,8 +36,8 @@ Keys are displayed once. The server stores only the SHA-256 hash.
 
 ## API
 
-All write endpoints require a platform API key via `Authorization: Bearer <key>`.
-Publisher endpoints require a publisher API key.
+All write endpoints require a platform API key via the `X-API-Key` header.
+Publisher endpoints require a publisher API key via the same header.
 
 ### Write (platform auth)
 

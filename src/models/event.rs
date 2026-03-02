@@ -29,7 +29,7 @@ pub struct EventsCreateRequest {
 // Database row
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct EventRow {
     pub id: Uuid,
     pub session_id: Uuid,

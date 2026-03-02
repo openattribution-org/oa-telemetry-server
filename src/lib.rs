@@ -39,7 +39,8 @@ pub mod state;
 pub use config::ServerConfig;
 pub use errors::OaError;
 pub use router::{
-    health_routes, internal_routes, publisher_routes, resolve_routes, router, write_routes,
+    click_routes, health_routes, internal_routes, publisher_routes, resolve_routes, router,
+    write_routes,
 };
 pub use state::OaState;
 
