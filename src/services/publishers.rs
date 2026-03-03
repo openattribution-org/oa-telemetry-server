@@ -3,8 +3,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::publisher::{
-    EventTypeCount, Paginated, PlatformKey, Publisher, PublisherEvent, PublisherSummary,
-    PublisherUrlMetric,
+    AgentBreakdown, EventTypeCount, Paginated, PlatformKey, Publisher, PublisherEvent,
+    PublisherSummary, PublisherUrlMetric,
 };
 
 /// Look up a platform key by its SHA-256 hash.
@@ -114,6 +114,9 @@ pub async fn get_publisher_summary(
         })
         .collect();
 
+    // Agent breakdown: group events by platform_id/agent_id via session JOIN
+    let agents = query_agent_breakdown(pool, &patterns, since, until).await?;
+
     Ok(PublisherSummary {
         publisher_id: publisher.id,
         publisher_name: publisher.name.clone(),
@@ -121,6 +124,7 @@ pub async fn get_publisher_summary(
         total_events,
         total_sessions,
         events_by_type,
+        agents,
         period_start: since,
         period_end: until,
     })
@@ -187,6 +191,8 @@ pub async fn get_publisher_events(
             content_url: r.content_url,
             event_timestamp: r.event_timestamp,
             event_data: r.event_data,
+            platform_id: r.platform_id,
+            agent_id: r.agent_id,
         })
         .collect();
 
@@ -388,12 +394,71 @@ fn build_publisher_event_queries(
         "SELECT COUNT(*) FROM events e WHERE ({where_like}){time_filter}"
     );
     let data_sql = format!(
-        "SELECT e.id, e.session_id, e.event_type, e.content_url, e.event_timestamp, e.event_data
-         FROM events e WHERE ({where_like}){time_filter}
+        "SELECT e.id, e.session_id, e.event_type, e.content_url, e.event_timestamp, e.event_data,
+                s.platform_id, s.agent_id
+         FROM events e
+         JOIN sessions s ON e.session_id = s.id
+         WHERE ({where_like}){time_filter}
          ORDER BY e.event_timestamp DESC"
     );
 
     (count_sql, data_sql)
+}
+
+async fn query_agent_breakdown(
+    pool: &PgPool,
+    patterns: &[String],
+    since: Option<DateTime<Utc>>,
+    until: Option<DateTime<Utc>>,
+) -> Result<Vec<AgentBreakdown>, sqlx::Error> {
+    let like_clauses: Vec<String> = (1..=patterns.len())
+        .map(|i| format!("e.content_url LIKE ${i}"))
+        .collect();
+    let where_like = like_clauses.join(" OR ");
+
+    let mut time_filter = String::new();
+    let mut param_idx = patterns.len() + 1;
+    if since.is_some() {
+        time_filter.push_str(&format!(" AND e.event_timestamp >= ${param_idx}"));
+        param_idx += 1;
+    }
+    if until.is_some() {
+        time_filter.push_str(&format!(" AND e.event_timestamp <= ${param_idx}"));
+    }
+    let _ = param_idx;
+
+    let sql = format!(
+        "SELECT s.platform_id, s.agent_id,
+                COUNT(*) as event_count,
+                COUNT(DISTINCT e.session_id) as session_count
+         FROM events e
+         JOIN sessions s ON e.session_id = s.id
+         WHERE ({where_like}){time_filter}
+         GROUP BY s.platform_id, s.agent_id
+         ORDER BY event_count DESC"
+    );
+
+    let mut q = sqlx::query_as::<_, AgentBreakdownRow>(&sql);
+    for p in patterns {
+        q = q.bind(p);
+    }
+    if let Some(ref s) = since {
+        q = q.bind(s);
+    }
+    if let Some(ref u) = until {
+        q = q.bind(u);
+    }
+
+    let rows = q.fetch_all(pool).await?;
+    Ok(rows
+        .into_iter()
+        .map(|r| AgentBreakdown {
+            platform_id: r.platform_id,
+            agent_id: r.agent_id,
+            event_count: r.event_count,
+            session_count: r.session_count,
+        })
+        .collect())
 }
 
 fn empty_summary(publisher: &Publisher) -> PublisherSummary {
@@ -404,6 +469,7 @@ fn empty_summary(publisher: &Publisher) -> PublisherSummary {
         total_events: 0,
         total_sessions: 0,
         events_by_type: vec![],
+        agents: vec![],
         period_start: None,
         period_end: None,
     }
@@ -426,6 +492,16 @@ struct PublisherEventRow {
     content_url: Option<String>,
     event_timestamp: DateTime<Utc>,
     event_data: serde_json::Value,
+    platform_id: Option<String>,
+    agent_id: Option<String>,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct AgentBreakdownRow {
+    platform_id: Option<String>,
+    agent_id: Option<String>,
+    event_count: i64,
+    session_count: i64,
 }
 
 #[derive(Debug, sqlx::FromRow)]

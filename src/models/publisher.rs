@@ -40,8 +40,17 @@ pub struct PublisherSummary {
     pub total_events: i64,
     pub total_sessions: i64,
     pub events_by_type: Vec<EventTypeCount>,
+    pub agents: Vec<AgentBreakdown>,
     pub period_start: Option<DateTime<Utc>>,
     pub period_end: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AgentBreakdown {
+    pub platform_id: Option<String>,
+    pub agent_id: Option<String>,
+    pub event_count: i64,
+    pub session_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -58,6 +67,8 @@ pub struct PublisherEvent {
     pub content_url: Option<String>,
     pub event_timestamp: DateTime<Utc>,
     pub event_data: serde_json::Value,
+    pub platform_id: Option<String>,
+    pub agent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
